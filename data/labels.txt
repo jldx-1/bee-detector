@@ -1,0 +1,16 @@
+# Semantic segmentation: <pixel_id> <label>
+0 background
+1 worker
+2 drone
+3 queen
+4 pollen
+5 honey
+6 capped_brood
+7 uncapped_brood
+8 varroa_mite
+9 small_hive_beetle
+10 wax_moth_larva
+11 deformed_wing
+12 chalkbrood_suspected
+13 foulbrood_suspected
+255 ignore
