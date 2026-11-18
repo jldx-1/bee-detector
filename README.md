@@ -39,7 +39,10 @@ are the class IDs in [data/labels.txt](data/labels.txt): `0` is background and
 Install Rust 1.88+, Git LFS, and graphics build libraries. On Ubuntu:
 
 ```sh
-sudo apt-get install build-essential pkg-config libxkbcommon-dev libwayland-dev libegl1-mesa-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
+sudo apt-get install build-essential pkg-config \
+  libxkbcommon-dev libwayland-dev libegl1-mesa-dev \
+  libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+  libx11-xcb1 libxcursor1 libxi6 libxkbcommon-x11-0
 git lfs install --local
 git lfs pull
 cargo run --release -- bee-data

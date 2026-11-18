@@ -9,7 +9,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - run: sudo apt-get update && sudo apt-get install -y pkg-config libxkbcommon-dev libwayland-dev libegl1-mesa-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev xvfb
+      - name: Install native build and X11 runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libxkbcommon-dev libwayland-dev libegl1-mesa-dev \
+            libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libx11-xcb1 libxcursor1 libxi6 libxkbcommon-x11-0 xvfb
       - run: cargo fmt --all -- --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
@@ -19,7 +24,10 @@ jobs:
           set +e
           timeout 5s xvfb-run -a env -u WAYLAND_DISPLAY -u WAYLAND_SOCKET WINIT_UNIX_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 target/debug/bee-detector --catalog /tmp/bee-smoke/catalog.sqlite3 bee-data
           status=$?
-          test "$status" -eq 124
+          if [ "$status" -ne 124 ]; then
+            echo "::error::Native viewer exited during startup (status $status)."
+            exit 1
+          fi
   pytorch:
     runs-on: ubuntu-latest
     steps:
