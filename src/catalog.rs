@@ -727,6 +727,10 @@ fn hash(path: &Path) -> Result<String> {
 
 fn inspect(conn: &Connection, image: &Path, mask: &Path) -> Result<Inspected> {
     let frame = image::open(image).with_context(|| format!("Reading {}", image.display()))?;
+    ensure!(
+        frame.color().channel_count() == 3,
+        "Input images must have exactly three RGB channels"
+    );
     let mask_ids = read_mask(mask)?;
     ensure!(
         (frame.width(), frame.height()) == (mask_ids.width, mask_ids.height),
@@ -979,6 +983,52 @@ mod tests {
                 .unwrap()
                 .images,
             1
+        );
+    }
+
+    #[test]
+    fn high_range_rgb_is_accepted_without_changing_source_pixels() {
+        let (_temp, mut db, root) = fixture();
+        let pixels = image::ImageBuffer::<image::Rgb<u16>, Vec<u16>>::from_pixel(
+            31,
+            17,
+            image::Rgb([4096, 32768, 65535]),
+        );
+        pixels.save(root.join("rgb16.png")).unwrap();
+        image::GrayImage::from_pixel(31, 17, image::Luma([1]))
+            .save(root.join("rgb16.mask.png"))
+            .unwrap();
+        let before = hash(&root.join("rgb16.png")).unwrap();
+        db.import(SOURCE, "train", "hive-07").unwrap();
+        assert_eq!(before, hash(&root.join("rgb16.png")).unwrap());
+        assert!(db.check().unwrap().is_empty());
+        let hdr = image::ImageBuffer::<image::Rgb<f32>, Vec<f32>>::from_pixel(
+            31,
+            17,
+            image::Rgb([0.125, 1.5, 12.0]),
+        );
+        hdr.save(root.join("hdr.tiff")).unwrap();
+        image::GrayImage::from_pixel(31, 17, image::Luma([1]))
+            .save(root.join("hdr.mask.png"))
+            .unwrap();
+        let hdr_hash = hash(&root.join("hdr.tiff")).unwrap();
+        db.import(SOURCE, "train", "hive-07").unwrap();
+        assert_eq!(hdr_hash, hash(&root.join("hdr.tiff")).unwrap());
+        assert_eq!(db.summary().unwrap().splits, [2, 0, 0]);
+        image::GrayImage::from_pixel(31, 17, image::Luma([20]))
+            .save(root.join("gray.png"))
+            .unwrap();
+        assert!(
+            db.register(
+                SOURCE,
+                Path::new("gray.png"),
+                Path::new("rgb16.mask.png"),
+                "train",
+                "hive-07"
+            )
+            .unwrap_err()
+            .to_string()
+            .contains("three RGB channels")
         );
     }
 

@@ -4,7 +4,7 @@ version = "0.2.0"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
-description = "A Linux dataset catalog and native segmentation data viewer for beekeepers"
+description = "A segmentation dataset and catalog for bee and hive health"
 
 [dependencies]
 anyhow = "1"

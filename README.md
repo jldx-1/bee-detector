@@ -1,24 +1,40 @@
 ![BEE detector — Bee and hive segmentation dataset](banner.png)
 
-**BEE detector** is a Linux dataset repository for bee and hive segmentation,
-built to give beekeepers better resources to understand and support their hives.
-Run `cargo run --release -- bee-data` to open the native Rust window: browse images
-in a bento grid, inspect sources, collection dates and resolutions, and move source folders
-or update their SQL locations. SQLite defines the train, val and test splits
-independently of the folder layout. The attached SQL catalog holds only paths
-and metadata; Git LFS versions the images and masks.
+**BEE detector** is a dataset repository for studying bees and hive health through
+image segmentation. It supports research and tools that help beekeepers
+understand and care for their hives.
+
+Explore the dataset:
+
+```sh
+cargo run --release -- bee-data
+```
+
+Browse images in a bento grid, inspect sources, collection dates and resolutions,
+and move source folders or update their SQL locations. SQLite defines the train,
+val and test splits independently of the folder layout. The attached SQL catalog
+holds only paths and metadata; Git LFS versions the images and masks.
 Labels cover workers, drones, queens, pollen, honey, pests and visible disease
 signs, listed in [data/labels.txt](data/labels.txt).
 [GVAT](https://github.com/jldx-1/gvat) is used to label and review the images and
 segmentation annotations. Setup and PyTorch examples follow below.
 
-<details>
-<summary>Setup and usage</summary>
+## Setup
 
 Run commands from the repository root. The catalog and native viewer are Rust;
 Python is only an optional PyTorch reader. Linux is the supported platform.
 
-## Start
+**Image input:** three-channel **RGB** (red, green, blue), with PyTorch batches
+shaped `[B, 3, H, W]`. Standard 8-bit RGB, 16-bit RGB PNG/TIFF and floating-point
+RGB TIFF can be stored without changing the source pixels. Use the reader's
+`--high-range` option for 16-bit or high dynamic range (HDR) inputs.
+
+**Segmentation format:** per-pixel semantic segmentation. Each image is paired
+with a same-resolution, 8-bit grayscale or indexed PNG mask. Mask pixel values
+are the class IDs in [data/labels.txt](data/labels.txt): `0` is background and
+`255` is ignored. Masks contain no instance IDs.
+
+### Start
 
 Install Rust 1.88+, Git LFS, and graphics build libraries. On Ubuntu:
 
@@ -184,24 +200,34 @@ you have permission to share under compatible terms.
 ## PyTorch
 
 Install your [PyTorch build](https://pytorch.org/get-started/locally/) and
-`numpy Pillow`, then run `python3 pytorch.py`. The reader snapshots SQL mappings
-once and opens no database handles in workers. It lazily decodes each pair:
+`numpy Pillow opencv-python-headless`, then run `python3 pytorch.py`. The reader
+snapshots SQL mappings once and opens no database handles in workers. It lazily
+decodes each pair:
 
 ```python
 import torch
-from pytorch import make_loader
+from pytorch import make_loader, to_device
 
 dataset, loader = make_loader('data/catalog.sqlite3', split='train', workers=4)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 for images, masks in loader:
-    images = images.to(device, dtype=torch.float32, non_blocking=True).div_(255)
-    masks = masks.to(device, dtype=torch.long, non_blocking=True)
+    images, masks = to_device(images, masks, device)
     # images [B,3,H,W]; masks [B,H,W]; dataset.num_classes output channels
     # loss = torch.nn.CrossEntropyLoss(ignore_index=255)(model(images), masks)
 ```
 
-CPU queues hold uint8 tensors. The loader uses pinned memory for CUDA, persistent
-workers and bounded prefetching. Benchmark worker count, batch size and resolution;
+For higher-range RGB, run `python3 pytorch.py --high-range` or pass
+`high_range=True` to `make_loader`. That mode returns float32 RGB: unsigned
+8-/16-bit inputs are scaled by 255/65535, while floating-point TIFF values retain
+their range, including values above 1. `to_device` avoids normalizing those
+values a second time. The default reader rejects high-range inputs rather than
+silently converting them to 8-bit. Viewer previews are 8-bit; source files are
+unchanged. No trained model is bundled; use a three-channel input encoder and
+choose normalization appropriate to its training data.
+
+Default CPU image queues hold uint8 tensors; high-range queues hold float32.
+The loader uses pinned memory for CUDA, persistent workers and bounded
+prefetching. Benchmark worker count, batch size and resolution;
 use `--workers 0` for debugging. Apply your encoder's normalization after scaling.
 The fixed-size reader resizes masks with nearest-neighbor interpolation. Any
 geometric augmentation must transform images and masks together. Recreate loaders
@@ -218,8 +244,6 @@ All fixtures stay in temporary directories, outside the real `data/` directory.
 The rounded banner is illustrative branding made with built-in image generation.
 Its boxes do not describe the pixel-mask training format, and the artwork is not
 training evidence.
-
-</details>
 
 ## License
 

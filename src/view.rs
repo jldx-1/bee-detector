@@ -104,7 +104,7 @@ fn style(ctx: &egui::Context) {
 fn bento() -> egui::Frame {
     egui::Frame::new()
         .fill(Color32::WHITE)
-        .stroke(egui::Stroke::new(1.0, Color32::from_rgb(225, 230, 220)))
+        .stroke(egui::Stroke::new(1.0_f32, Color32::from_rgb(225, 230, 220)))
         .corner_radius(14)
         .inner_margin(18)
 }

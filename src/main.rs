@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(version, about = "Linux dataset tools for healthier hives")]
+#[command(version, about = "Bee and hive-health segmentation dataset tools")]
 struct Args {
     #[arg(long, default_value = "data/catalog.sqlite3", global = true)]
     catalog: PathBuf,
