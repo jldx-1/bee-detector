@@ -3,6 +3,7 @@ name = "bee-detector"
 version = "0.2.0"
 edition = "2024"
 rust-version = "1.88"
+license = "MIT"
 description = "A Linux dataset catalog and native segmentation data viewer for beekeepers"
 
 [dependencies]
